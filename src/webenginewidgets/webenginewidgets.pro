@@ -53,3 +53,5 @@ HEADERS = \
 }
 
 load(qt_module)
+
+isSanitizerEnabled(): useClangInPathOnOSX()

@@ -33,3 +33,5 @@ qtConfig(framework) {
 } else {
     target.path = $$[QT_INSTALL_LIBEXECS]
 }
+
+isSanitizerEnabled(): useClangInPathOnOSX()

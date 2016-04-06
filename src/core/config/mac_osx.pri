@@ -1,6 +1,9 @@
 include(common.pri)
 load(functions)
 
+# Set the PATH-provided compiler, to pass it to ninja.
+isSanitizerEnabled(): useClangInPathOnOSX()
+
 # Reuse the cached sdk version value from mac/sdk.prf if available
 # otherwise query for it.
 QMAKE_MAC_SDK_VERSION = $$eval(QMAKE_MAC_SDK.$${QMAKE_MAC_SDK}.SDKVersion)

@@ -11,6 +11,9 @@ QMAKE_INFO_PLIST = Info_mac.plist
 
 load(qt_module)
 
+# Override the qt_module provided compiler with the PATH-provided one.
+isSanitizerEnabled(): useClangInPathOnOSX()
+
 api_library_name = qtwebenginecoreapi$$qtPlatformTargetSuffix()
 api_library_path = $$OUT_PWD/api/$$getConfigDir()
 

@@ -74,6 +74,7 @@ defineTest(isPlatformSupported) {
     return(false)
   }
   !isPythonVersionSupported(): return(false)
+  isSanitizerEnabled():!isSanitizerSupported(): return(false)
   return(true)
 }
 
@@ -94,6 +95,158 @@ defineTest(isPythonVersionSupported) {
     skipBuild("Using Python version $${python_major_version}.$${python_minor_version}.$${python_patch_version}.")
     skipBuild($$python_error_msg)
     return(false)
+}
+
+defineTest(isSanitizerEnabled) {
+  contains(CONFIG, sanitizer)|contains(QT_CONFIG, sanitizer) {
+    isASanEnabled()|isMSanEnabled()|isUBSanEnabled()|isTSanEnabled(): return(true)
+  }
+  return(false)
+}
+
+defineTest(isSanitizerSupported) {
+  isASanEnabled() {
+    linux-clang-libc++ {
+      isSanitizerSupportedOnLinux(): return(true)
+    } else:osx {
+      isSanitizerSupportedOnOSX(): return(true)
+    }
+    skipBuild("An ASan-enabled Qt WebEngine build can only be built on Linux or OS X using Clang and libc++.")
+    return(false)
+  }
+
+  isMSanEnabled() {
+    skipBuild("An MSan-enabled Qt WebEngine build is not supported.")
+    return(false)
+  }
+
+  isUBSanEnabled() {
+    linux-clang-libc++:CONFIG(release, debug|release) {
+      isSanitizerSupportedOnLinux(): return(true)
+    }
+    skipBuild("An UBSan-enabled Qt WebEngine build can only be built on Linux using Clang and libc++ in release mode.")
+    return(false)
+  }
+
+  isTSanEnabled() {
+    linux-clang-libc++ {
+      isSanitizerSupportedOnLinux(): return(true)
+    }
+    skipBuild("A TSan-enabled Qt WebEngine build can only be built on Linux using Clang and libc++.")
+    return(false)
+  }
+
+  skipBuild("Chosen sanitizer is not supported with current platform configuration.")
+  return(false)
+}
+
+defineTest(isASanEnabled) {
+  contains(CONFIG, sanitize_address): return(true)
+  contains(QT_CONFIG, sanitize_address): return(true)
+  return(false)
+}
+
+defineTest(isMSanEnabled) {
+  contains(CONFIG, sanitize_memory): return(true)
+  contains(QT_CONFIG, sanitize_memory): return(true)
+  return(false)
+}
+
+defineTest(isUBSanEnabled) {
+  contains(CONFIG, sanitize_undefined): return(true)
+  contains(QT_CONFIG, sanitize_undefined): return(true)
+  return(false)
+}
+
+defineTest(isTSanEnabled) {
+  contains(CONFIG, sanitize_thread): return(true)
+  contains(QT_CONFIG, sanitize_thread): return(true)
+  return(false)
+}
+
+defineTest(isSanitizerSupportedOnLinux) {
+  isASanLinuxClangVersionSupported(): return(true)
+  return(false)
+}
+
+defineTest(isSanitizerSupportedOnOSX) {
+  getClangVersionInPath()
+  # TODO: Apple clang 7.3.0 currently has a bug that causes symbolizing filenames and lines to be
+  # flaky. Bump the version once the bug gets fixed. Compiling with it works fine though.
+  equals(QTWEBENGINE_CLANG_IS_APPLE, "1"):isASanOSXAppleClangVersionSupported(): return(true)
+  isASanOSXClangVersionSupported(): return(true)
+  return(false)
+}
+
+defineTest(isASanOSXAppleClangVersionSupported) {
+  # Clang sanitizer suppression attributes work from apple Clang version 7.3.0+.
+  greaterThan(QTWEBENGINE_CLANG_MAJOR_VERSION, 7): return(true)
+  greaterThan(QTWEBENGINE_CLANG_MINOR_VERSION, 2): return(true)
+
+  skipBuild("Using apple clang version $${QTWEBENGINE_CLANG_MAJOR_VERSION}.$${QTWEBENGINE_CLANG_MINOR_VERSION}.$${QTWEBENGINE_CLANG_PATCH_VERSION}, but at least apple clang version 7.3.0 is required to build a sanitizer-enabled Qt WebEngine.")
+  return(false)
+}
+
+defineTest(isASanOSXClangVersionSupported) {
+  # Clang sanitizer suppression attributes work from non-apple Clang version 3.7+.
+  greaterThan(QTWEBENGINE_CLANG_MAJOR_VERSION, 3): return(true)
+  greaterThan(QTWEBENGINE_CLANG_MINOR_VERSION, 6): return(true)
+
+  skipBuild("Using clang version $${QTWEBENGINE_CLANG_MAJOR_VERSION}.$${QTWEBENGINE_CLANG_MINOR_VERSION}, but at least clang version 3.7 is required to build a sanitizer-enabled Qt WebEngine.")
+  return(false)
+}
+
+defineTest(isASanLinuxClangVersionSupported) {
+  # Clang sanitizer suppression attributes work from Clang version 3.7+.
+  greaterThan(QT_CLANG_MAJOR_VERSION, 3): return(true)
+  greaterThan(QT_CLANG_MINOR_VERSION, 6): return(true)
+
+  skipBuild("Using clang version $${QT_CLANG_MAJOR_VERSION}.$${QT_CLANG_MINOR_VERSION}, but at least clang version 3.7 is required to build a sanitizer-enabled Qt WebEngine.")
+  return(false)
+}
+
+defineTest(getClangVersionInPath) {
+  newline = $$escape_expand(\\n)
+  # Adapted from qtbase/configure, and split into multiple lines for easier reading.
+  sed_invocation_lines = "clang++ -v 2>&1 | sed -n -E '" \
+                         "/^Apple (clang|LLVM) version /{s///; s/^([0-9]*)\.([0-9]*)\.?([0-9]*).*$/QTWEBENGINE_CLANG_MAJOR_VERSION=\1:QTWEBENGINE_CLANG_MINOR_VERSION=\2:QTWEBENGINE_CLANG_PATCH_VERSION=\3:QTWEBENGINE_CLANG_IS_APPLE=1/;p;q;}" \
+                         "/^clang version /{s///; s/^([0-9]*)\.([0-9]*)\.?([0-9]*).*$/QTWEBENGINE_CLANG_MAJOR_VERSION=\1:QTWEBENGINE_CLANG_MINOR_VERSION=\2:QTWEBENGINE_CLANG_PATCH_VERSION=\3:QTWEBENGINE_CLANG_IS_APPLE=0/;p;q;}'"
+  sed_invocation = $$join(sed_invocation_lines, $$newline)
+  sed_output = $$system($$sed_invocation)
+  sed_output_list = $$split(sed_output, :)
+
+  # Extracts values into QTWEBENGINE_CLANG_MAJOR_VERSION, QTWEBENGINE_CLANG_MINOR_VERSION,
+  # QTWEBENGINE_CLANG_MINOR_VERSION, and QTWEBENGINE_CLANG_IS_APPLE (empty if not an apple-provided
+  # compiler).
+  for (assignment, sed_output_list) {
+      eval($$assignment)
+  }
+  export(QTWEBENGINE_CLANG_MAJOR_VERSION)
+  export(QTWEBENGINE_CLANG_MINOR_VERSION)
+  export(QTWEBENGINE_CLANG_PATCH_VERSION)
+  export(QTWEBENGINE_CLANG_IS_APPLE)
+  return(true)
+}
+
+defineTest(useClangInPathOnOSX) {
+  # Checks done for performance only on OSX, when sanitizer is enabled.
+  osx:isSanitizerEnabled():getClangVersionInPath()
+
+  # Skip the compiler variables assignments if not on OSX, or clang is apple provided one.
+  if(isEmpty(QTWEBENGINE_CLANG_IS_APPLE)|equals(QTWEBENGINE_CLANG_IS_APPLE, "1")):return(false)
+
+  # Get clang from PATH, assumes that the found clang is a non-apple one.
+  candidate_clang_cc_path = $$which("clang")
+  candidate_clang_cxx_path = $$which("clang++")
+
+  # Replace the default macx-clang mkspec compilers which are used by Qt for building, with the
+  # PATH-provided clang.
+  QMAKE_MAC_SDK.macx-clang.$${QMAKE_MAC_SDK}.QMAKE_CC = $$candidate_clang_cc_path
+  QMAKE_MAC_SDK.macx-clang.$${QMAKE_MAC_SDK}.QMAKE_CXX = $$candidate_clang_cxx_path
+  QMAKE_MAC_SDK.macx-clang.$${QMAKE_MAC_SDK}.QMAKE_LINK = $$candidate_clang_cxx_path
+  export(QMAKE_MAC_SDK.macx-clang.$${QMAKE_MAC_SDK}.QMAKE_C)
+  export(QMAKE_MAC_SDK.macx-clang.$${QMAKE_MAC_SDK}.QMAKE_CXX)
+  export(QMAKE_MAC_SDK.macx-clang.$${QMAKE_MAC_SDK}.QMAKE_LINK)
 }
 
 defineTest(isGCCVersionSupported) {

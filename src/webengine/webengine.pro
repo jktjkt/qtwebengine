@@ -66,3 +66,5 @@ isQMLTestSupportApiEnabled() {
 }
 
 load(qt_module)
+
+isSanitizerEnabled(): useClangInPathOnOSX()

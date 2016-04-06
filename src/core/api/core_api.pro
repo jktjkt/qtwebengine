@@ -57,3 +57,5 @@ msvc {
         "if exist $(DESTDIR_TARGET).objects del $(DESTDIR_TARGET).objects$$escape_expand(\\n\\t)" \
         "for %%a in ($(OBJECTS)) do echo $$shell_quote($$shell_path($$OUT_PWD))\\%%a >> $(DESTDIR_TARGET).objects"
 }
+
+isSanitizerEnabled(): useClangInPathOnOSX()
