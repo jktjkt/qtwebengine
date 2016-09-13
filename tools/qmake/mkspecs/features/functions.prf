@@ -106,12 +106,12 @@ defineTest(isSanitizerEnabled) {
 
 defineTest(isSanitizerSupported) {
   isASanEnabled() {
-    linux-clang-libc++ {
+    linux-clang|linux-clang-libc++ {
       isSanitizerSupportedOnLinux(): return(true)
     } else:osx {
       isSanitizerSupportedOnOSX(): return(true)
     }
-    skipBuild("An ASan-enabled Qt WebEngine build can only be built on Linux or OS X using Clang and libc++.")
+    skipBuild("An ASan-enabled Qt WebEngine build can only be built on Linux or OS X using Clang.")
     return(false)
   }
 
