@@ -26,6 +26,8 @@ GYP_CONFIG += disable_glibcxx_debug=1
 
 linux:qtConfig(separate_debug_info): GYP_CONFIG += linux_dump_symbols=1
 
+linux: GYP_CONFIG += werror=
+
 force_debug_info {
     win32: GYP_CONFIG += win_release_extra_cflags=-Zi
     else: GYP_CONFIG += release_extra_cflags=-g
